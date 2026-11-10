@@ -71,13 +71,31 @@ export function UploadForm() {
         body: formData,
         method: "POST",
       });
-      const result = (await response.json()) as {
-        key?: string;
-        message?: string;
-      };
+      const responseText = await response.text();
+      let result: { key?: string; message?: string } = {};
 
-      if (!response.ok || !result.key) {
-        throw new Error(result.message ?? "The image could not be uploaded");
+      if (responseText) {
+        try {
+          result = JSON.parse(responseText) as {
+            key?: string;
+            message?: string;
+          };
+        } catch {
+          throw new Error(
+            `Upload failed with status ${response.status} (${response.statusText})`,
+          );
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ??
+            `Upload failed with status ${response.status} (${response.statusText})`,
+        );
+      }
+
+      if (!result.key) {
+        throw new Error("The upload server returned an invalid response");
       }
 
       setState({
