@@ -1,4 +1,9 @@
 version: 1
+env:
+  variables:
+    S3_UPLOAD_PREFIX: "uploads"
+    MAX_UPLOAD_SIZE_MB: "10"
+    ALLOWED_IMAGE_TYPES: "image/jpeg,image/png,image/webp"
 frontend:
   phases:
     preBuild:
@@ -6,8 +11,8 @@ frontend:
         - npm ci
     build:
       commands:
-        - test -n "$AWS_REGION" -a -n "$S3_BUCKET_NAME" -a -n "$S3_UPLOAD_PREFIX" -a -n "$MAX_UPLOAD_SIZE_MB" -a -n "$ALLOWED_IMAGE_TYPES"
-        - env | grep -E '^(AWS_REGION|S3_BUCKET_NAME|S3_UPLOAD_PREFIX|MAX_UPLOAD_SIZE_MB|ALLOWED_IMAGE_TYPES)=' >> .env.production
+        - test -n "$S3_REGION" -a -n "$S3_BUCKET_NAME" -a -n "$S3_UPLOAD_PREFIX" -a -n "$MAX_UPLOAD_SIZE_MB" -a -n "$ALLOWED_IMAGE_TYPES"
+        - env | grep -E '^(S3_REGION|S3_BUCKET_NAME|S3_UPLOAD_PREFIX|MAX_UPLOAD_SIZE_MB|ALLOWED_IMAGE_TYPES)=' >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next

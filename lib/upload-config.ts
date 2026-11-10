@@ -34,7 +34,7 @@ export function getUploadConfig(): UploadConfig {
 
   return {
     allowedImageTypes,
-    awsRegion: getRequiredEnv("AWS_REGION"),
+    awsRegion: getRequiredEnv("S3_REGION"),
     bucketName: getRequiredEnv("S3_BUCKET_NAME"),
     maxUploadSizeBytes: Math.floor(maxUploadSizeMb * 1024 * 1024),
     uploadPrefix: getRequiredEnv("S3_UPLOAD_PREFIX").replace(/^\/+|\/+$/g, ""),
