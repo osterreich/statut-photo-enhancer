@@ -33,7 +33,7 @@ The S3 bucket should remain private. Give the local AWS identity and the Amplify
 }
 ```
 
-For Amplify, add the variables from `.env.example` in the app environment settings. `amplify.yml` writes these non-secret values to `.env.production` before the Next.js build so they are available to the server runtime. The region variable is named `S3_REGION` because Amplify reserves the `AWS_` prefix. Do not add long-lived AWS access keys to Amplify environment variables; attach an IAM SSR Compute role instead.
+For Amplify, add the variables from `.env.example` in the app environment settings. `amplify.yml` writes these values to `.env.production` before the Next.js build so they are available to the server runtime. The upload size limit, allowed image types, and S3 upload prefix are defined as constants in `lib/upload-config.ts`. The region variable is named `S3_REGION` because Amplify reserves the `AWS_` prefix. Do not add long-lived AWS access keys to Amplify environment variables; attach an IAM SSR Compute role instead.
 
 ## Scripts
 

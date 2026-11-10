@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, DragEvent, FormEvent } from "react";
 import { useState } from "react";
 
 type UploadState =
@@ -9,18 +9,44 @@ type UploadState =
   | { kind: "error"; message: string };
 
 export function UploadForm() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [state, setState] = useState<UploadState>({
     kind: "idle",
     message: "",
   });
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-
+  function handleFileSelection(file: File | undefined) {
+    setSelectedFile(file ?? null);
     setSelectedFileName(file?.name ?? "");
     setState({ kind: "idle", message: "" });
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    handleFileSelection(event.target.files?.[0]);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLLabelElement>) {
+    if (
+      !(event.relatedTarget instanceof Node) ||
+      !event.currentTarget.contains(event.relatedTarget)
+    ) {
+      setIsDragging(false);
+    }
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    handleFileSelection(event.dataTransfer.files[0]);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -28,6 +54,14 @@ export function UploadForm() {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+
+    if (!selectedFile) {
+      setState({ kind: "error", message: "Please select an image file" });
+      return;
+    }
+
+    formData.delete("file");
+    formData.append("file", selectedFile);
 
     setIsUploading(true);
     setState({ kind: "idle", message: "" });
@@ -52,6 +86,7 @@ export function UploadForm() {
         message: "Image uploaded successfully",
       });
       form.reset();
+      setSelectedFile(null);
       setSelectedFileName("");
     } catch (error) {
       setState({
@@ -69,7 +104,15 @@ export function UploadForm() {
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <label
-        className="flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-6 py-8 text-center transition hover:border-zinc-500 hover:bg-zinc-100"
+        className={`flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition hover:border-zinc-500 hover:bg-zinc-100 ${
+          isDragging
+            ? "border-zinc-950 bg-zinc-100"
+            : "border-zinc-300 bg-zinc-50"
+        }`}
+        onDragEnter={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         htmlFor="image-file"
       >
         <span className="mb-3 text-4xl" aria-hidden="true">
@@ -79,7 +122,7 @@ export function UploadForm() {
           {selectedFileName || "Choose an image to upload"}
         </span>
         <span className="mt-2 text-sm text-zinc-500">
-          Select an image file
+          Drag and drop an image here, or select a file
         </span>
         <input
           accept="image/*"
@@ -87,7 +130,6 @@ export function UploadForm() {
           id="image-file"
           name="file"
           onChange={handleFileChange}
-          required
           type="file"
         />
       </label>

@@ -6,6 +6,10 @@ type UploadConfig = {
   uploadPrefix: string;
 };
 
+const MAX_UPLOAD_SIZE_MB = 10;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const S3_UPLOAD_PREFIX = "uploads";
+
 function getRequiredEnv(name: string): string {
   const value = process.env[name]?.trim();
 
@@ -17,26 +21,11 @@ function getRequiredEnv(name: string): string {
 }
 
 export function getUploadConfig(): UploadConfig {
-  const maxUploadSizeMb = Number(getRequiredEnv("MAX_UPLOAD_SIZE_MB"));
-
-  if (!Number.isFinite(maxUploadSizeMb) || maxUploadSizeMb <= 0) {
-    throw new Error("MAX_UPLOAD_SIZE_MB must be a positive number");
-  }
-
-  const allowedImageTypes = getRequiredEnv("ALLOWED_IMAGE_TYPES")
-    .split(",")
-    .map((type) => type.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (allowedImageTypes.length === 0) {
-    throw new Error("ALLOWED_IMAGE_TYPES must contain at least one MIME type");
-  }
-
   return {
-    allowedImageTypes,
+    allowedImageTypes: ALLOWED_IMAGE_TYPES,
     awsRegion: getRequiredEnv("S3_REGION"),
     bucketName: getRequiredEnv("S3_BUCKET_NAME"),
-    maxUploadSizeBytes: Math.floor(maxUploadSizeMb * 1024 * 1024),
-    uploadPrefix: getRequiredEnv("S3_UPLOAD_PREFIX").replace(/^\/+|\/+$/g, ""),
+    maxUploadSizeBytes: MAX_UPLOAD_SIZE_MB * 1024 * 1024,
+    uploadPrefix: S3_UPLOAD_PREFIX,
   };
 }
