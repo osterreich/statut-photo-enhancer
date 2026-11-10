@@ -68,54 +68,68 @@ export function UploadForm() {
     event.preventDefault();
 
     const form = event.currentTarget;
-    const formData = new FormData(form);
 
     if (!selectedFile) {
       setState({ kind: "error", message: "Please select an image file" });
       return;
     }
 
-    formData.delete("file");
-    formData.append("file", selectedFile);
-
     setIsUploading(true);
     setState({ kind: "idle", message: "" });
 
     try {
-      const response = await fetch("/api/upload", {
-        body: formData,
+      const presignResponse = await fetch("/api/upload", {
+        body: JSON.stringify({
+          contentType: selectedFile.type,
+          fileName: selectedFile.name,
+          size: selectedFile.size,
+        }),
+        headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-      const responseText = await response.text();
-      let result: { key?: string; message?: string } = {};
-
-      if (responseText) {
-        try {
-          result = JSON.parse(responseText) as {
+      const presignText = await presignResponse.text();
+      const presignResult = presignText
+        ? (JSON.parse(presignText) as {
+            fields?: Record<string, string>;
             key?: string;
             message?: string;
-          };
-        } catch {
-          throw new Error(
-            `Upload failed with status ${response.status} (${response.statusText})`,
-          );
-        }
-      }
+            url?: string;
+          })
+        : {};
 
-      if (!response.ok) {
+      if (
+        !presignResponse.ok ||
+        !presignResult.url ||
+        !presignResult.fields ||
+        !presignResult.key
+      ) {
         throw new Error(
-          result.message ??
-            `Upload failed with status ${response.status} (${response.statusText})`,
+          presignResult.message ??
+            `Upload failed with status ${presignResponse.status} (${presignResponse.statusText})`,
         );
       }
 
-      if (!result.key) {
-        throw new Error("The upload server returned an invalid response");
+      const uploadFormData = new FormData();
+
+      for (const [key, value] of Object.entries(presignResult.fields)) {
+        uploadFormData.append(key, value);
+      }
+      uploadFormData.append("file", selectedFile);
+
+      const uploadResponse = await fetch(presignResult.url, {
+        body: uploadFormData,
+        method: "POST",
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(
+          `S3 upload failed with status ${uploadResponse.status} (${uploadResponse.statusText})`,
+        );
       }
 
       setState({
         kind: "success",
-        key: result.key,
+        key: presignResult.key,
         message: "Image uploaded successfully",
       });
       form.reset();

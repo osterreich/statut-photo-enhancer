@@ -14,7 +14,7 @@ npm run dev
 
 Open http://localhost:3000.
 
-The server uploads files through `POST /api/upload`. AWS credentials are never sent to the browser.
+The server creates a short-lived presigned S3 upload policy through `POST /api/upload`. The browser sends the image directly to S3, so AWS credentials and large file bodies are never sent through Next.js or Amplify.
 
 ## AWS setup
 
@@ -34,6 +34,17 @@ The S3 bucket should remain private. Give the local AWS identity and the Amplify
 ```
 
 For Amplify, add the variables from `.env.example` in the app environment settings. `amplify.yml` writes these values to `.env.production` before the Next.js build so they are available to the server runtime. The 5 MB upload size limit, allowed image types, and S3 upload prefix are defined in `lib/upload-constants.ts`. The region variable is named `S3_REGION` because Amplify reserves the `AWS_` prefix. Do not add long-lived AWS access keys to Amplify environment variables; attach an IAM SSR Compute role instead.
+
+Configure bucket CORS once so the browser can submit the presigned upload:
+
+```bash
+aws s3api put-bucket-cors \
+  --bucket statut-photo-enhancer-prod \
+  --cors-configuration file://s3-cors.json \
+  --profile default
+```
+
+If the site uses a custom domain, add its exact `https://...` origin to `s3-cors.json` and apply the command again. S3 accepts a single `*` wildcard in an allowed origin, which is used here for Amplify preview and production subdomains.
 
 ## Scripts
 

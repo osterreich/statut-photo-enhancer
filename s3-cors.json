@@ -1,0 +1,14 @@
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://*.amplifyapp.com"
+      ],
+      "AllowedMethods": ["POST"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
