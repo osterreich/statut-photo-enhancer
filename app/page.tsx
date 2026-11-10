@@ -1,6 +1,9 @@
 import { UploadForm } from "@/app/upload-form";
+import { getBuildInfo } from "@/lib/build-info";
 
 export default function Home() {
+  const buildInfo = getBuildInfo();
+
   return (
     <main className="flex min-h-full flex-1 items-center justify-center bg-zinc-100 px-6 py-12">
       <section className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-xl shadow-zinc-200/60 sm:p-12">
@@ -17,6 +20,9 @@ export default function Home() {
           </p>
         </div>
         <UploadForm />
+        <footer className="mt-8 text-center text-xs text-zinc-400">
+          {buildInfo.label}
+        </footer>
       </section>
     </main>
   );

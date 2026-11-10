@@ -46,6 +46,13 @@ aws s3api put-bucket-cors \
 
 If the site uses a custom domain, add its exact `https://...` origin to `s3-cors.json` and apply the command again. S3 accepts a single `*` wildcard in an allowed origin, which is used here for Amplify preview and production subdomains.
 
+## Build version
+
+The UI displays the package version, branch, and short commit SHA for the
+deployed build. Amplify provides the commit and branch through `AWS_COMMIT_ID`
+and `AWS_BRANCH`, so every commit deployed by Amplify gets a unique build label
+without changing `package.json` on every commit.
+
 ## Scripts
 
 ```bash
