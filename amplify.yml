@@ -1,0 +1,18 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - test -n "$AWS_REGION" -a -n "$S3_BUCKET_NAME" -a -n "$S3_UPLOAD_PREFIX" -a -n "$MAX_UPLOAD_SIZE_MB" -a -n "$ALLOWED_IMAGE_TYPES"
+        - env | grep -E '^(AWS_REGION|S3_BUCKET_NAME|S3_UPLOAD_PREFIX|MAX_UPLOAD_SIZE_MB|ALLOWED_IMAGE_TYPES)=' >> .env.production
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*

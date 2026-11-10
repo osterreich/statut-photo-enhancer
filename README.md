@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Statut Photo Enhancer
 
-## Getting Started
+Next.js application with an initial image-upload flow. The current version accepts JPEG, PNG and WebP files and stores them in a private Amazon S3 bucket. Image enhancement will be added later.
 
-First, run the development server:
+## Local development
+
+1. Copy `.env.example` to `.env.local` and set the S3 bucket and region.
+2. Make sure the AWS SDK can resolve credentials locally through the AWS CLI profile, IAM Identity Center, or environment variables.
+3. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The server uploads files through `POST /api/upload`. AWS credentials are never sent to the browser.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## AWS setup
 
-## Learn More
+The S3 bucket should remain private. Give the local AWS identity and the Amplify SSR Compute role only the permissions needed for the upload prefix:
 
-To learn more about Next.js, take a look at the following resources:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/uploads/*"
+    }
+  ]
+}
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+For Amplify, add the variables from `.env.example` in the app environment settings. `amplify.yml` writes these non-secret values to `.env.production` before the Next.js build so they are available to the server runtime. Do not add long-lived AWS access keys to Amplify environment variables; attach an IAM SSR Compute role instead.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev
+npm run lint
+npm run build
+```
