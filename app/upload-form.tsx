@@ -3,6 +3,11 @@
 import type { ChangeEvent, DragEvent, FormEvent } from "react";
 import { useState } from "react";
 
+import {
+  MAX_UPLOAD_SIZE_BYTES,
+  MAX_UPLOAD_SIZE_MB,
+} from "@/lib/upload-constants";
+
 type UploadState =
   | { kind: "idle"; message: string }
   | { kind: "success"; message: string; key: string }
@@ -19,6 +24,16 @@ export function UploadForm() {
   });
 
   function handleFileSelection(file: File | undefined) {
+    if (file && file.size > MAX_UPLOAD_SIZE_BYTES) {
+      setSelectedFile(null);
+      setSelectedFileName("");
+      setState({
+        kind: "error",
+        message: `Image must be ${MAX_UPLOAD_SIZE_MB} MB or smaller`,
+      });
+      return;
+    }
+
     setSelectedFile(file ?? null);
     setSelectedFileName(file?.name ?? "");
     setState({ kind: "idle", message: "" });

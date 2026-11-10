@@ -1,3 +1,9 @@
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_UPLOAD_SIZE_BYTES,
+  S3_UPLOAD_PREFIX,
+} from "@/lib/upload-constants";
+
 type UploadConfig = {
   allowedImageTypes: string[];
   awsRegion: string;
@@ -5,10 +11,6 @@ type UploadConfig = {
   maxUploadSizeBytes: number;
   uploadPrefix: string;
 };
-
-const MAX_UPLOAD_SIZE_MB = 10;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const S3_UPLOAD_PREFIX = "uploads";
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -25,7 +27,7 @@ export function getUploadConfig(): UploadConfig {
     allowedImageTypes: ALLOWED_IMAGE_TYPES,
     awsRegion: getRequiredEnv("S3_REGION"),
     bucketName: getRequiredEnv("S3_BUCKET_NAME"),
-    maxUploadSizeBytes: MAX_UPLOAD_SIZE_MB * 1024 * 1024,
+    maxUploadSizeBytes: MAX_UPLOAD_SIZE_BYTES,
     uploadPrefix: S3_UPLOAD_PREFIX,
   };
 }
