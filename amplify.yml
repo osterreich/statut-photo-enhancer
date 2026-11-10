@@ -11,7 +11,11 @@ frontend:
         - npm ci
     build:
       commands:
-        - test -n "$S3_REGION" -a -n "$S3_BUCKET_NAME" -a -n "$S3_UPLOAD_PREFIX" -a -n "$MAX_UPLOAD_SIZE_MB" -a -n "$ALLOWED_IMAGE_TYPES"
+        - 'test -n "$S3_REGION" || { echo "Missing Amplify env S3_REGION"; exit 1; }'
+        - 'test -n "$S3_BUCKET_NAME" || { echo "Missing Amplify env S3_BUCKET_NAME"; exit 1; }'
+        - 'test -n "$S3_UPLOAD_PREFIX" || { echo "Missing Amplify env S3_UPLOAD_PREFIX"; exit 1; }'
+        - 'test -n "$MAX_UPLOAD_SIZE_MB" || { echo "Missing Amplify env MAX_UPLOAD_SIZE_MB"; exit 1; }'
+        - 'test -n "$ALLOWED_IMAGE_TYPES" || { echo "Missing Amplify env ALLOWED_IMAGE_TYPES"; exit 1; }'
         - env | grep -E '^(S3_REGION|S3_BUCKET_NAME|S3_UPLOAD_PREFIX|MAX_UPLOAD_SIZE_MB|ALLOWED_IMAGE_TYPES)=' >> .env.production
         - npm run build
   artifacts:
