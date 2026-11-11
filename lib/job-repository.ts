@@ -19,6 +19,8 @@ import {
 import { getDynamoDbDocumentClient } from "@/lib/dynamodb-client";
 
 type JobItem = JobRecord & {
+  GSI1PK: string;
+  GSI1SK: string;
   PK: string;
   SK: "JOB";
   entityType: "job";
@@ -60,6 +62,10 @@ function photoKey(jobId: string, photoId: string) {
   };
 }
 
+function ownerIndexKey(owner: JobOwner): string {
+  return `OWNER#${owner.ownerType}#${owner.ownerId}`;
+}
+
 function now(): string {
   return new Date().toISOString();
 }
@@ -76,12 +82,19 @@ function isPhotoItem(item: unknown): item is PhotoItem {
   return Boolean(item && typeof item === "object" && "photoId" in item);
 }
 
-function withoutStorageKeys<T extends object>(item: T): Omit<T, "PK" | "SK" | "entityType"> {
+function withoutStorageKeys<T extends object>(
+  item: T,
+): Omit<T, "PK" | "SK" | "GSI1PK" | "GSI1SK" | "entityType"> {
   return Object.fromEntries(
     Object.entries(item).filter(
-      ([key]) => key !== "PK" && key !== "SK" && key !== "entityType",
+      ([key]) =>
+        key !== "PK" &&
+        key !== "SK" &&
+        key !== "GSI1PK" &&
+        key !== "GSI1SK" &&
+        key !== "entityType",
     ),
-  ) as Omit<T, "PK" | "SK" | "entityType">;
+  ) as Omit<T, "PK" | "SK" | "GSI1PK" | "GSI1SK" | "entityType">;
 }
 
 function toJobRecord(item: JobItem): JobRecord {
@@ -119,6 +132,8 @@ export async function createJob({
     entityType: "job",
     expiresAt,
     failedPhotos: 0,
+    GSI1PK: ownerIndexKey({ ownerId, ownerType }),
+    GSI1SK: `${timestamp}#${jobId}`,
     jobId,
     ownerId,
     ownerType,
@@ -442,4 +457,24 @@ export async function getJobForOwner(
   }
 
   return result;
+}
+
+export async function listJobsForOwner(
+  owner: JobOwner,
+  limit = 20,
+): Promise<JobRecord[]> {
+  const result = await getDynamoDbDocumentClient().send(
+    new QueryCommand({
+      ExpressionAttributeValues: {
+        ":ownerKey": ownerIndexKey(owner),
+      },
+      IndexName: "OwnerIndex",
+      KeyConditionExpression: "GSI1PK = :ownerKey",
+      Limit: limit,
+      ScanIndexForward: false,
+      TableName: getTableName(),
+    }),
+  );
+
+  return (result.Items ?? []).filter(isJobItem).map(toJobRecord);
 }

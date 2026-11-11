@@ -1,4 +1,5 @@
 import { UploadForm } from "@/app/upload-form";
+import { JobList } from "@/app/job-list";
 import { getBuildInfo } from "@/lib/build-info";
 
 export default function Home() {
@@ -20,6 +21,9 @@ export default function Home() {
           </p>
         </div>
         <UploadForm />
+        <div className="mt-10 border-t border-zinc-200 pt-8">
+          <JobList />
+        </div>
         <footer className="mt-8 text-center text-xs text-zinc-400">
           {buildInfo.label}
         </footer>

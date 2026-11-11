@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { createJob, createPhoto } from "@/lib/job-repository";
+import {
+  createJob,
+  createPhoto,
+  listJobsForOwner,
+} from "@/lib/job-repository";
 import { getUploadConfig } from "@/lib/upload-config";
 import {
   ALLOWED_IMAGE_TYPES,
@@ -26,6 +30,31 @@ type CreateJobRequest = {
 const JOB_RETENTION_SECONDS = 3 * 24 * 60 * 60;
 
 class JobRequestError extends Error {}
+
+export async function GET() {
+  try {
+    const owner = await getSessionOwner();
+    const jobs = await listJobsForOwner(owner);
+
+    return Response.json({
+      jobs: jobs.map((job) => ({
+        completedPhotos: job.completedPhotos,
+        createdAt: job.createdAt,
+        failedPhotos: job.failedPhotos,
+        jobId: job.jobId,
+        status: job.status,
+        totalPhotos: job.totalPhotos,
+      })),
+    });
+  } catch (error) {
+    console.error("Jobs listing failed", error);
+
+    return Response.json(
+      { message: "The jobs could not be loaded" },
+      { status: 500 },
+    );
+  }
+}
 
 function isPhotoRequest(value: unknown): value is CreateJobPhotoRequest {
   return Boolean(value && typeof value === "object");

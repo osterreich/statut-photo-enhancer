@@ -25,12 +25,15 @@ The job state is stored in a single-table DynamoDB design. Job records use
 `SK=PHOTO#{photoId}`. The table definition is in
 `infrastructure/dynamodb-jobs-table.yaml`.
 
+The `OwnerIndex` GSI uses `GSI1PK` and `GSI1SK` so the app can list jobs for
+the current anonymous session without scanning the table.
+
 Set `DYNAMODB_TABLE_NAME` to the deployed table name. `DYNAMODB_REGION` is
 optional and falls back to `S3_REGION`.
 
 The app runtime role needs `dynamodb:PutItem`, `dynamodb:GetItem`,
-`dynamodb:Query`, `dynamodb:UpdateItem`, and `dynamodb:TransactWriteItems` on
-this table.
+`dynamodb:Query`, and `dynamodb:UpdateItem` on the table and its
+`OwnerIndex` index.
 
 For anonymous users, jobs are associated with a hashed session identifier.
 The raw session identifier is stored only in an `HttpOnly` cookie named

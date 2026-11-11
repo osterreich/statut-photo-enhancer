@@ -215,6 +215,7 @@ export function UploadForm() {
       setSelectedFiles([]);
       setUploadedCount(0);
       form.reset();
+      window.dispatchEvent(new Event("photo-enhancer:jobs-changed"));
     } catch (error) {
       setState({
         kind: "error",
