@@ -5,6 +5,7 @@ import {
 } from "@/lib/job-repository";
 import { JOB_STATUSES, PHOTO_STATUSES } from "@/lib/job-types";
 import { getSessionOwner } from "@/lib/session";
+import { processJob } from "@/lib/photo-processor";
 
 export async function POST(
   _request: Request,
@@ -42,10 +43,13 @@ export async function POST(
     result.photos.map((photo) => markPhotoQueued(jobId, photo.photoId)),
   );
   await startJob(jobId);
+  await processJob(jobId);
+
+  const processedResult = await getJobForOwner(jobId, owner);
 
   return Response.json({
     jobId,
-    status: JOB_STATUSES.QUEUED,
+    status: processedResult?.job.status ?? JOB_STATUSES.PROCESSING,
     totalPhotos: result.job.totalPhotos,
   });
 }

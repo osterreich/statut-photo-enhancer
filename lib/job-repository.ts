@@ -317,6 +317,7 @@ async function finalizeJobIfReady(jobId: string): Promise<void> {
 export async function markPhotoCompleted(
   jobId: string,
   photoId: string,
+  previewKey: string,
   resultKey: string,
 ): Promise<void> {
   const timestamp = now();
@@ -332,6 +333,7 @@ export async function markPhotoCompleted(
             },
             ExpressionAttributeValues: {
               ":completed": PHOTO_STATUSES.COMPLETED,
+              ":previewKey": previewKey,
               ":processing": PHOTO_STATUSES.PROCESSING,
               ":resultKey": resultKey,
               ":timestamp": timestamp,
@@ -339,7 +341,7 @@ export async function markPhotoCompleted(
             Key: photoKey(jobId, photoId),
             TableName: getTableName(),
             UpdateExpression:
-              "SET #status = :completed, resultKey = :resultKey, updatedAt = :timestamp REMOVE errorMessage",
+              "SET #status = :completed, previewKey = :previewKey, resultKey = :resultKey, updatedAt = :timestamp REMOVE errorMessage",
           },
         },
         {

@@ -8,6 +8,10 @@ type JobSummary = {
   failedPhotos: number;
   jobId: string;
   orderStatus: string | null;
+  photos: {
+    photoId: string;
+    previewUrl: string;
+  }[];
   status: string;
   totalPhotos: number;
 };
@@ -159,6 +163,20 @@ export function JobList() {
               <p className="mt-2 text-xs text-zinc-500">
                 {new Date(job.createdAt).toLocaleString()}
               </p>
+              {job.photos.length > 0 && (
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  {job.photos.map((photo) => (
+                    // Preview URLs are short-lived S3 URLs generated for completed photos.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt="Processed photo preview"
+                      className="aspect-square w-full rounded-lg object-cover"
+                      key={photo.photoId}
+                      src={photo.previewUrl}
+                    />
+                  ))}
+                </div>
+              )}
               {job.status === "completed" &&
                 (job.orderStatus === "paid" ? (
                   <p className="mt-3 text-sm font-medium text-emerald-700">

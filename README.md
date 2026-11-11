@@ -79,8 +79,11 @@ The S3 bucket should remain private. Give the local AWS identity and the Amplify
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/uploads/*"
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::YOUR_BUCKET_NAME/uploads/*",
+        "arn:aws:s3:::YOUR_BUCKET_NAME/processed/*"
+      ]
     }
   ]
 }

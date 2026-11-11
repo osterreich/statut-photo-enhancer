@@ -51,6 +51,7 @@ export type PhotoRecord = {
   photoId: string;
   status: PhotoStatus;
   originalKey: string;
+  previewKey?: string;
   contentType: string;
   size: number;
   resultKey?: string;

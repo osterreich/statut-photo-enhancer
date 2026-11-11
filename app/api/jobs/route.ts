@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   createJob,
   createPhoto,
+  getJobForOwner,
   listJobsForOwner,
 } from "@/lib/job-repository";
 import { getOrderForJob } from "@/lib/order-repository";
@@ -17,6 +18,7 @@ import {
   createPresignedUpload,
 } from "@/lib/s3-upload-service";
 import { getSessionOwner } from "@/lib/session";
+import { createS3DownloadUrl } from "@/lib/s3-storage-service";
 
 type CreateJobPhotoRequest = {
   contentType?: unknown;
@@ -39,7 +41,18 @@ export async function GET() {
 
     const summaries = await Promise.all(
       jobs.map(async (job) => {
-        const order = await getOrderForJob(job.jobId);
+        const [order, jobWithPhotos] = await Promise.all([
+          getOrderForJob(job.jobId),
+          getJobForOwner(job.jobId, owner),
+        ]);
+        const photos = await Promise.all(
+          (jobWithPhotos?.photos ?? [])
+            .filter((photo) => photo.previewKey)
+            .map(async (photo) => ({
+              photoId: photo.photoId,
+              previewUrl: await createS3DownloadUrl(photo.previewKey!),
+            })),
+        );
 
         return {
           completedPhotos: job.completedPhotos,
@@ -47,6 +60,7 @@ export async function GET() {
           failedPhotos: job.failedPhotos,
           jobId: job.jobId,
           orderStatus: order?.status ?? null,
+          photos,
           status: job.status,
           totalPhotos: job.totalPhotos,
         };
