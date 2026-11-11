@@ -8,7 +8,12 @@ frontend:
       commands:
         - 'test -n "$S3_REGION" || { echo "Missing Amplify env S3_REGION"; exit 1; }'
         - 'test -n "$S3_BUCKET_NAME" || { echo "Missing Amplify env S3_BUCKET_NAME"; exit 1; }'
-        - env | grep -E '^(S3_REGION|S3_BUCKET_NAME)=' >> .env.production
+        - 'test -n "$DYNAMODB_TABLE_NAME" || { echo "Missing Amplify env DYNAMODB_TABLE_NAME"; exit 1; }'
+        - 'test -n "$APP_URL" || { echo "Missing Amplify env APP_URL"; exit 1; }'
+        - 'test -n "$STRIPE_SECRET_KEY" || { echo "Missing Amplify env STRIPE_SECRET_KEY"; exit 1; }'
+        - 'test -n "$STRIPE_PRICE_ID" || { echo "Missing Amplify env STRIPE_PRICE_ID"; exit 1; }'
+        - 'test -n "$STRIPE_WEBHOOK_SECRET" || { echo "Missing Amplify env STRIPE_WEBHOOK_SECRET"; exit 1; }'
+        - env | grep -E '^(S3_REGION|S3_BUCKET_NAME|DYNAMODB_TABLE_NAME|DYNAMODB_REGION|APP_URL|STRIPE_SECRET_KEY|STRIPE_PRICE_ID|STRIPE_WEBHOOK_SECRET)=' >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
