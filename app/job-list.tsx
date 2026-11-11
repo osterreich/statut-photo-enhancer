@@ -166,14 +166,21 @@ export function JobList() {
               {job.photos.length > 0 && (
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   {job.photos.map((photo) => (
-                    // Preview URLs are short-lived S3 URLs generated for completed photos.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      alt="Processed photo preview"
-                      className="aspect-square w-full rounded-lg object-cover"
+                    <a
+                      aria-label="Open processed photo preview"
+                      href={photo.previewUrl}
                       key={photo.photoId}
-                      src={photo.previewUrl}
-                    />
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {/* Preview URLs are short-lived S3 URLs generated for completed photos. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt="Processed photo preview"
+                        className="aspect-square w-full rounded-lg object-cover transition hover:opacity-80"
+                        src={photo.previewUrl}
+                      />
+                    </a>
                   ))}
                 </div>
               )}
