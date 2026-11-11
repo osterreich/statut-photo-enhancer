@@ -5,7 +5,7 @@ import { getUploadConfig } from "@/lib/upload-config";
 
 type CreateUploadRequest = {
   contentType: string;
-  fileName: string;
+  key: string;
   size: number;
 };
 
@@ -23,24 +23,26 @@ function getFileExtension(fileName: string): string {
   return /^\.[a-z0-9]{1,10}$/i.test(extension) ? extension.toLowerCase() : "";
 }
 
-function createUploadKey(fileName: string, uploadPrefix: string): string {
-  const now = new Date();
-  const datePrefix = [
-    now.getUTCFullYear(),
-    String(now.getUTCMonth() + 1).padStart(2, "0"),
-    String(now.getUTCDate()).padStart(2, "0"),
-  ].join("/");
+export function createPhotoUploadKey({
+  fileName,
+  jobId,
+  photoId,
+}: {
+  fileName: string;
+  jobId: string;
+  photoId: string;
+}): string {
+  const config = getUploadConfig();
 
-  return `${uploadPrefix}/${datePrefix}/${crypto.randomUUID()}${getFileExtension(fileName)}`;
+  return `${config.uploadPrefix}/jobs/${jobId}/${photoId}${getFileExtension(fileName)}`;
 }
 
 export async function createPresignedUpload({
   contentType,
-  fileName,
+  key,
   size,
 }: CreateUploadRequest): Promise<PresignedUpload> {
   const config = getUploadConfig();
-  const key = createUploadKey(fileName, config.uploadPrefix);
   const s3Client = new S3Client({ region: config.awsRegion });
   const presignedPost = await createPresignedPost(s3Client, {
     Bucket: config.bucketName,

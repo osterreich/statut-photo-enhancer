@@ -15,8 +15,8 @@ export default function Home() {
             Upload your image
           </h1>
           <p className="mt-4 text-base leading-7 text-zinc-600">
-            Select an image and we&apos;ll save it to S3. Enhancement will come
-            next.
+            Select up to 10 images. We&apos;ll upload them, create a processing
+            job, and enhance them in the background.
           </p>
         </div>
         <UploadForm />

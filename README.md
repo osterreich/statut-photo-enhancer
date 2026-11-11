@@ -4,7 +4,7 @@ Next.js application with an initial image-upload flow. The current version accep
 
 ## Local development
 
-1. Copy `.env.example` to `.env.local` and set the S3 bucket and region.
+1. Copy `.env.example` to `.env.local` and set the S3 bucket, region, and DynamoDB table name.
 2. Make sure the AWS SDK can resolve credentials locally through the AWS CLI profile, IAM Identity Center, or environment variables.
 3. Start the app:
 
@@ -14,7 +14,28 @@ npm run dev
 
 Open http://localhost:3000.
 
-The server creates a short-lived presigned S3 upload policy through `POST /api/upload`. The browser sends the image directly to S3, so AWS credentials and large file bodies are never sent through Next.js or Amplify.
+`POST /api/jobs` creates a job and short-lived presigned S3 upload policies.
+The browser sends image bodies directly to S3, so AWS credentials and large
+file bodies are never sent through Next.js or Amplify.
+
+## DynamoDB jobs table
+
+The job state is stored in a single-table DynamoDB design. Job records use
+`PK=JOB#{jobId}, SK=JOB`; photo records use the same partition key and
+`SK=PHOTO#{photoId}`. The table definition is in
+`infrastructure/dynamodb-jobs-table.yaml`.
+
+Set `DYNAMODB_TABLE_NAME` to the deployed table name. `DYNAMODB_REGION` is
+optional and falls back to `S3_REGION`.
+
+The app runtime role needs `dynamodb:PutItem`, `dynamodb:GetItem`,
+`dynamodb:Query`, `dynamodb:UpdateItem`, and `dynamodb:TransactWriteItems` on
+this table.
+
+For anonymous users, jobs are associated with a hashed session identifier.
+The raw session identifier is stored only in an `HttpOnly` cookie named
+`photo_session`; it is never sent to the client application or stored in
+DynamoDB.
 
 ## AWS setup
 
