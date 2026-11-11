@@ -5,6 +5,7 @@ import {
   createPhoto,
   listJobsForOwner,
 } from "@/lib/job-repository";
+import { getOrderForJob } from "@/lib/order-repository";
 import { getUploadConfig } from "@/lib/upload-config";
 import {
   ALLOWED_IMAGE_TYPES,
@@ -36,16 +37,23 @@ export async function GET() {
     const owner = await getSessionOwner();
     const jobs = await listJobsForOwner(owner);
 
-    return Response.json({
-      jobs: jobs.map((job) => ({
-        completedPhotos: job.completedPhotos,
-        createdAt: job.createdAt,
-        failedPhotos: job.failedPhotos,
-        jobId: job.jobId,
-        status: job.status,
-        totalPhotos: job.totalPhotos,
-      })),
-    });
+    const summaries = await Promise.all(
+      jobs.map(async (job) => {
+        const order = await getOrderForJob(job.jobId);
+
+        return {
+          completedPhotos: job.completedPhotos,
+          createdAt: job.createdAt,
+          failedPhotos: job.failedPhotos,
+          jobId: job.jobId,
+          orderStatus: order?.status ?? null,
+          status: job.status,
+          totalPhotos: job.totalPhotos,
+        };
+      }),
+    );
+
+    return Response.json({ jobs: summaries });
   } catch (error) {
     console.error("Jobs listing failed", error);
 

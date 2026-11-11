@@ -7,6 +7,7 @@ type JobSummary = {
   createdAt: string;
   failedPhotos: number;
   jobId: string;
+  orderStatus: string | null;
   status: string;
   totalPhotos: number;
 };
@@ -14,6 +15,12 @@ type JobSummary = {
 type JobsResponse = {
   jobs?: JobSummary[];
   message?: string;
+};
+
+type CheckoutResponse = {
+  checkoutUrl?: string;
+  message?: string;
+  orderStatus?: string;
 };
 
 async function fetchJobs(): Promise<JobSummary[]> {
@@ -31,6 +38,33 @@ export function JobList() {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [checkoutJobId, setCheckoutJobId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState("");
+
+  async function startCheckout(jobId: string) {
+    setCheckoutJobId(jobId);
+    setCheckoutError("");
+
+    try {
+      const response = await fetch(`/api/jobs/${jobId}/checkout`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as CheckoutResponse;
+
+      if (!response.ok || !result.checkoutUrl) {
+        throw new Error(result.message ?? "Checkout could not be started");
+      }
+
+      window.location.assign(result.checkoutUrl);
+    } catch (checkoutLoadError) {
+      setCheckoutError(
+        checkoutLoadError instanceof Error
+          ? checkoutLoadError.message
+          : "Checkout could not be started",
+      );
+      setCheckoutJobId(null);
+    }
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -125,10 +159,30 @@ export function JobList() {
               <p className="mt-2 text-xs text-zinc-500">
                 {new Date(job.createdAt).toLocaleString()}
               </p>
+              {job.status === "completed" &&
+                (job.orderStatus === "paid" ? (
+                  <p className="mt-3 text-sm font-medium text-emerald-700">
+                    Paid
+                  </p>
+                ) : (
+                  <button
+                    className="mt-3 w-full rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                    disabled={checkoutJobId === job.jobId}
+                    onClick={() => startCheckout(job.jobId)}
+                    type="button"
+                  >
+                    {checkoutJobId === job.jobId
+                      ? "Opening checkout…"
+                      : job.orderStatus === "pending"
+                        ? "Continue to payment"
+                        : "Download for $5"}
+                  </button>
+                ))}
             </li>
           );
         })}
       </ul>
+      {checkoutError && <p className="text-sm text-red-600">{checkoutError}</p>}
     </section>
   );
 }

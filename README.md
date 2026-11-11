@@ -18,6 +18,17 @@ Open http://localhost:3000.
 The browser sends image bodies directly to S3, so AWS credentials and large
 file bodies are never sent through Next.js or Amplify.
 
+When a job is completed, the jobs list shows a `Download for $5` button. The
+button creates a Stripe-hosted Checkout Session; the application does not
+render or handle card details itself. The server keeps the Stripe Price ID and
+amount, so the browser cannot change the price.
+
+The Stripe webhook endpoint is `POST /api/stripe/webhook`. Configure it to
+listen for `checkout.session.completed`,
+`checkout.session.async_payment_succeeded`,
+`checkout.session.async_payment_failed`, and `checkout.session.expired`.
+Only a verified webhook changes an order to `paid`.
+
 ## DynamoDB jobs table
 
 The job state is stored in a single-table DynamoDB design. Job records use
@@ -40,6 +51,24 @@ The raw session identifier is stored only in an `HttpOnly` cookie named
 `photo_session`; it is never sent to the client application or stored in
 DynamoDB.
 
+## Orders and Stripe Checkout
+
+Orders use the existing DynamoDB table and do not require a new index:
+`PK=JOB#{jobId}, SK=ORDER`. Each job has at most one order. The order stores
+the Stripe Checkout Session ID, amount, currency, payment status, and customer
+email received from Stripe.
+
+Create a one-time `$5` Price in Stripe Dashboard and put its ID into
+`STRIPE_PRICE_ID`. For local webhook testing, use the Stripe CLI:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copy the printed `whsec_...` value to `STRIPE_WEBHOOK_SECRET`. In production,
+create a Dashboard webhook endpoint at
+`https://YOUR_DOMAIN/api/stripe/webhook` and use its endpoint secret.
+
 ## AWS setup
 
 The S3 bucket should remain private. Give the local AWS identity and the Amplify SSR Compute role only the permissions needed for the upload prefix:
@@ -57,7 +86,7 @@ The S3 bucket should remain private. Give the local AWS identity and the Amplify
 }
 ```
 
-For Amplify, add the variables from `.env.example` in the app environment settings. `amplify.yml` writes these values to `.env.production` before the Next.js build so they are available to the server runtime. The 5 MB upload size limit, allowed image types, and S3 upload prefix are defined in `lib/upload-constants.ts`. The region variable is named `S3_REGION` because Amplify reserves the `AWS_` prefix. Do not add long-lived AWS access keys to Amplify environment variables; attach an IAM SSR Compute role instead.
+For Amplify, add the variables from `.env.example` in the app environment settings. `amplify.yml` writes these values to `.env.production` before the Next.js build so they are available to the server runtime. The 10 MB upload size limit, allowed image types, and S3 upload prefix are defined in `lib/upload-constants.ts`. The region variable is named `S3_REGION` because Amplify reserves the `AWS_` prefix. Do not add long-lived AWS access keys to Amplify environment variables; attach an IAM SSR Compute role instead.
 
 Configure bucket CORS once so the browser can submit the presigned upload:
 
