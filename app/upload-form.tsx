@@ -1,8 +1,16 @@
 "use client";
 
 import type { ChangeEvent, DragEvent, FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { UploadDropzone } from "@/app/upload-dropzone";
+import { UploadButton, UploadFeedback } from "@/app/upload-controls";
+import type {
+  CreateJobResponse,
+  FilePreview,
+  JobUpload,
+  UploadState,
+} from "@/app/upload-types";
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_PHOTOS_PER_JOB,
@@ -10,40 +18,47 @@ import {
   MAX_UPLOAD_SIZE_MB,
 } from "@/lib/upload-constants";
 
-type UploadState =
-  | { kind: "idle"; message: string }
-  | { kind: "success"; jobId: string; message: string }
-  | { kind: "error"; message: string };
-
-type JobUpload = {
-  contentType: string;
-  fields: Record<string, string>;
-  fileName: string;
-  key: string;
-  photoId: string;
-  size: number;
-  url: string;
-};
-
-type CreateJobResponse = {
-  jobId?: string;
-  message?: string;
-  uploads?: JobUpload[];
-};
-
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
 export function UploadForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewUrlsRef = useRef<FilePreview[]>([]);
   const [state, setState] = useState<UploadState>({
     kind: "idle",
     message: "",
   });
+
+  useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach(({ url }) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  function clearPreviews() {
+    previewUrlsRef.current.forEach(({ url }) => URL.revokeObjectURL(url));
+    previewUrlsRef.current = [];
+    setPreviews([]);
+  }
+
+  function replaceSelectedFiles(files: File[]) {
+    clearPreviews();
+
+    const nextPreviews = files.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+
+    previewUrlsRef.current = nextPreviews;
+    setPreviews(nextPreviews);
+    setSelectedFiles(files);
+  }
 
   function handleFileSelection(fileList: FileList | File[]) {
     const files = Array.from(fileList);
@@ -53,6 +68,7 @@ export function UploadForm() {
     }
 
     if (files.length > MAX_PHOTOS_PER_JOB) {
+      clearPreviews();
       setSelectedFiles([]);
       setState({
         kind: "error",
@@ -66,6 +82,7 @@ export function UploadForm() {
     );
 
     if (invalidType) {
+      clearPreviews();
       setSelectedFiles([]);
       setState({
         kind: "error",
@@ -79,6 +96,7 @@ export function UploadForm() {
     );
 
     if (oversizedFile) {
+      clearPreviews();
       setSelectedFiles([]);
       setState({
         kind: "error",
@@ -87,13 +105,44 @@ export function UploadForm() {
       return;
     }
 
-    setSelectedFiles(files);
+    replaceSelectedFiles(files);
     setUploadedCount(0);
     setState({ kind: "idle", message: "" });
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     handleFileSelection(event.target.files ?? []);
+  }
+
+  function removeFile(indexToRemove: number) {
+    const fileToRemove = selectedFiles[indexToRemove];
+
+    if (fileToRemove) {
+      const previewToRemove = previewUrlsRef.current.find(
+        ({ file }) => file === fileToRemove,
+      );
+
+      if (previewToRemove) {
+        URL.revokeObjectURL(previewToRemove.url);
+      }
+
+      previewUrlsRef.current = previewUrlsRef.current.filter(
+        ({ file }) => file !== fileToRemove,
+      );
+      setPreviews((currentPreviews) =>
+        currentPreviews.filter(({ file }) => file !== fileToRemove),
+      );
+    }
+
+    setSelectedFiles((files) =>
+      files.filter((_, index) => index !== indexToRemove),
+    );
+    setState({ kind: "idle", message: "" });
+
+    // Allow selecting the same file again after removing it.
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function handleDragOver(event: DragEvent<HTMLLabelElement>) {
@@ -212,6 +261,7 @@ export function UploadForm() {
         jobId: createJobResult.jobId,
         message: "Photos uploaded. The enhancement job is queued.",
       });
+      clearPreviews();
       setSelectedFiles([]);
       setUploadedCount(0);
       form.reset();
@@ -228,75 +278,27 @@ export function UploadForm() {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <label
-        className={`flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition hover:border-zinc-500 hover:bg-zinc-100 ${
-          isDragging
-            ? "border-zinc-950 bg-zinc-100"
-            : "border-zinc-300 bg-zinc-50"
-        }`}
+      <UploadDropzone
+        fileInputRef={fileInputRef}
+        isDragging={isDragging}
+        isUploading={isUploading}
         onDragEnter={handleDragOver}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        htmlFor="image-file"
-      >
-        <span className="mb-3 text-4xl" aria-hidden="true">
-          ↑
-        </span>
-        <span className="font-medium text-zinc-900">
-          {selectedFiles.length > 0
-            ? `${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"} selected`
-            : "Choose photos to enhance"}
-        </span>
-        <span className="mt-2 text-sm text-zinc-500">
-          Drag and drop up to {MAX_PHOTOS_PER_JOB} images, or select files
-        </span>
-        <input
-          accept={ALLOWED_IMAGE_TYPES.join(",")}
-          className="sr-only"
-          id="image-file"
-          multiple
-          name="file"
-          onChange={handleFileChange}
-          type="file"
-        />
-      </label>
+        onFileChange={handleFileChange}
+        onRemove={removeFile}
+        previews={previews}
+        selectedFiles={selectedFiles}
+      />
 
-      {selectedFiles.length > 0 && (
-        <ul className="space-y-1 text-sm text-zinc-600">
-          {selectedFiles.map((file) => (
-            <li className="truncate" key={`${file.name}-${file.size}`}>
-              {file.name}
-            </li>
-          ))}
-        </ul>
-      )}
+      <UploadButton
+        isUploading={isUploading}
+        selectedCount={selectedFiles.length}
+        uploadedCount={uploadedCount}
+      />
 
-      <button
-        className="flex h-12 w-full items-center justify-center rounded-full bg-zinc-950 px-5 font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
-        disabled={isUploading}
-        type="submit"
-      >
-        {isUploading
-          ? uploadedCount > 0
-            ? `Uploading ${uploadedCount}/${selectedFiles.length}…`
-            : "Starting upload…"
-          : selectedFiles.length > 0
-            ? `Upload ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}`
-            : "Upload photos"}
-      </button>
-
-      <div aria-live="polite" className="min-h-6 text-sm">
-        {state.kind === "success" && (
-          <p className="text-emerald-700">
-            {state.message} Job ID: <code>{state.jobId}</code>
-          </p>
-        )}
-        {state.kind === "error" && <p className="text-red-600">{state.message}</p>}
-        {state.kind === "idle" && state.message && (
-          <p className="text-zinc-500">{state.message}</p>
-        )}
-      </div>
+      <UploadFeedback state={state} />
     </form>
   );
 }
